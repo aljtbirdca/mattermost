@@ -2897,15 +2897,51 @@ func TestGetDirectOrGroupMessageMembersCommonTeams(t *testing.T) {
 	require.NotNil(t, otherGMChannel)
 
 	t.Run("Get teams for GM channel", func(t *testing.T) {
-		commonTeams, appErr := th.App.GetDirectOrGroupMessageMembersCommonTeams(th.Context, gmChannel.Id)
+		session := &model.Session{
+			UserId: user1.Id,
+		}
+		ctx := th.Context.WithSession(session)
+
+		commonTeams, appErr := th.App.GetDirectOrGroupMessageMembersCommonTeams(ctx, gmChannel.Id)
 		require.Nil(t, appErr)
 		require.Equal(t, 2, len(commonTeams))
 	})
 
 	t.Run("No common teams", func(t *testing.T) {
-		commonTeams, appErr := th.App.GetDirectOrGroupMessageMembersCommonTeams(th.Context, otherGMChannel.Id)
+		session := &model.Session{
+			UserId: user2.Id,
+		}
+		ctx := th.Context.WithSession(session)
+
+		commonTeams, appErr := th.App.GetDirectOrGroupMessageMembersCommonTeams(ctx, otherGMChannel.Id)
 		require.Nil(t, appErr)
 		require.Equal(t, 0, len(commonTeams))
+	})
+
+	t.Run("Deactivated requesting user returns forbidden error", func(t *testing.T) {
+		deactivatedUser := th.CreateUser()
+
+		_, _, appErr := th.App.AddUserToTeam(th.Context, team1.Id, deactivatedUser.Id, "")
+		require.Nil(t, appErr)
+		_, _, appErr = th.App.AddUserToTeam(th.Context, team2.Id, deactivatedUser.Id, "")
+		require.Nil(t, appErr)
+
+		gmWithDeactivated, appErr := th.App.createGroupChannel(th.Context, []string{user1.Id, user2.Id, deactivatedUser.Id}, user1.Id)
+		require.Nil(t, appErr)
+		require.NotNil(t, gmWithDeactivated)
+
+		_, appErr = th.App.UpdateActive(th.Context, deactivatedUser, false)
+		require.Nil(t, appErr)
+
+		session := &model.Session{
+			UserId: deactivatedUser.Id,
+		}
+		ctx := th.Context.WithSession(session)
+
+		commonTeams, appErr := th.App.GetDirectOrGroupMessageMembersCommonTeams(ctx, gmWithDeactivated.Id)
+		require.NotNil(t, appErr)
+		require.Equal(t, http.StatusForbidden, appErr.StatusCode)
+		require.Nil(t, commonTeams)
 	})
 }
 
