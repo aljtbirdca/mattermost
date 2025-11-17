@@ -4628,13 +4628,14 @@ func (c *Client4) DoPostAction(ctx context.Context, postId, actionId string) (*R
 
 // DoPostActionWithCookie performs a post action with extra arguments
 func (c *Client4) DoPostActionWithCookie(ctx context.Context, postId, actionId, selected, cookieStr string) (*Response, error) {
-	route, err := c.postRoute(postId).JoinSegment("actions").JoinId(actionId).String()
+	route, err := c.postRoute(postId).JoinSegment("actions").JoinAlphaNum(actionId).String()
 	if err != nil {
 		return nil, err
 	}
 
 	if selected == "" && cookieStr == "" {
-		r, err := c.DoAPIPost(ctx, route, "")
+		var r *http.Response
+		r, err = c.DoAPIPost(ctx, route, "")
 		if err != nil {
 			return BuildResponse(r), err
 		}

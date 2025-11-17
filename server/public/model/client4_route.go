@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"unicode"
+
+	"github.com/pkg/errors"
 )
 
 // clientRoute is a thin wrapper around url.URL, with additional methods
@@ -125,6 +128,22 @@ func (r clientRoute) JoinCategoryId(v string) clientRoute {
 	if !IsValidCategoryId(v) {
 		r.err = fmt.Errorf("%q is not a valid category id", v)
 		return r
+	}
+
+	return r.JoinSegment(v)
+}
+
+func (r clientRoute) JoinAlphaNum(v string) clientRoute {
+	if v == "" {
+		r.err = errors.New("expected alphanumeric string, got an empty string")
+		return r
+	}
+
+	for _, rune := range v {
+		if !unicode.IsLetter(rune) && !unicode.IsNumber(rune) {
+			r.err = fmt.Errorf("%q is not an alphanumeric string", v)
+			return r
+		}
 	}
 
 	return r.JoinSegment(v)

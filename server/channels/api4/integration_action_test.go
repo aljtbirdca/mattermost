@@ -93,21 +93,6 @@ func TestPostActionCookies(t *testing.T) {
 			ExpectedSuccess:    true,
 			ExpectedStatusCode: http.StatusOK,
 		},
-		"Empty ID": {
-			Action: model.PostAction{
-				Id:   "",
-				Name: "Test-action",
-				Type: model.PostActionTypeButton,
-				Integration: &model.PostActionIntegration{
-					URL: server.URL,
-					Context: map[string]any{
-						"test-key": "test-value",
-					},
-				},
-			},
-			ExpectedSuccess:    false,
-			ExpectedStatusCode: http.StatusNotFound,
-		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			post := &model.Post{
@@ -145,6 +130,55 @@ func TestPostActionCookies(t *testing.T) {
 			assert.NotNil(t, resp.ServerVersion)
 		})
 	}
+
+	// This needs to be tested separately, as Client4.DoPostActionWithCookie
+	// rejects empty IDs without making the request
+	t.Run("Empty ID", func(t *testing.T) {
+		action := model.PostAction{
+			Id:   "",
+			Name: "Test-action",
+			Type: model.PostActionTypeButton,
+			Integration: &model.PostActionIntegration{
+				URL: server.URL,
+				Context: map[string]any{
+					"test-key": "test-value",
+				},
+			},
+		}
+
+		post := &model.Post{
+			Id:        model.NewId(),
+			Type:      model.PostTypeEphemeral,
+			UserId:    th.BasicUser.Id,
+			ChannelId: th.BasicChannel.Id,
+			CreateAt:  model.GetMillis(),
+			UpdateAt:  model.GetMillis(),
+			Props: map[string]any{
+				model.PostPropsAttachments: []*model.SlackAttachment{
+					{
+						Title:     "some-title",
+						TitleLink: "https://some-url.com",
+						Text:      "some-text",
+						ImageURL:  "https://some-other-url.com",
+						Actions:   []*model.PostAction{&action},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t, 32, len(th.App.PostActionCookieSecret()))
+		post = model.AddPostActionCookies(post, th.App.PostActionCookieSecret())
+
+		// Use DoAPIPost directly to build a route with an empty action ID
+		r, err := client.DoAPIPost(context.Background(), "/posts/"+post.Id+"/actions//", "")
+		require.Error(t, err)
+		resp := model.BuildResponse(r)
+		defer closeBody(r)
+
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		assert.NotNil(t, resp.RequestId)
+		assert.NotNil(t, resp.ServerVersion)
+	})
 }
 
 func TestOpenDialog(t *testing.T) {
