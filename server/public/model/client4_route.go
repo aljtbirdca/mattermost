@@ -121,6 +121,15 @@ func (r clientRoute) JoinJobType(v string) clientRoute {
 	return r.JoinSegment(v)
 }
 
+func (r clientRoute) JoinCategoryId(v string) clientRoute {
+	if !IsValidCategoryId(v) {
+		r.err = fmt.Errorf("%q is not a valid category id", v)
+		return r
+	}
+
+	return r.JoinSegment(v)
+}
+
 func (r clientRoute) URL() (*url.URL, error) {
 	if r.err != nil {
 		return nil, r.err

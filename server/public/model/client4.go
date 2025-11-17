@@ -8568,7 +8568,7 @@ func (c *Client4) GetSidebarCategoryForTeamForUser(ctx context.Context, userID, 
 }
 
 func (c *Client4) UpdateSidebarCategoryForTeamForUser(ctx context.Context, userID, teamID, categoryID string, category *SidebarCategoryWithChannels) (*SidebarCategoryWithChannels, *Response, error) {
-	route, err := c.userCategoryRoute(userID, teamID).JoinId(categoryID).String()
+	route, err := c.userCategoryRoute(userID, teamID).JoinCategoryId(categoryID).String()
 	if err != nil {
 		return nil, nil, err
 	}
