@@ -4413,7 +4413,12 @@ func (c *Client4) GetPostsForReporting(ctx context.Context, options ReportPostOp
 		ReportPostOptionsCursor: cursor,
 	}
 
-	r, err := c.DoAPIPostJSON(ctx, c.reportsRoute()+"/posts", request)
+	route, err := c.reportsRoute().JoinSegment("posts").String()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r, err := c.DoAPIPostJSON(ctx, route, request)
 	if err != nil {
 		return nil, BuildResponse(r), err
 	}
